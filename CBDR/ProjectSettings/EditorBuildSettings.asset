@@ -4,5 +4,17 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scene/MainMenuNew.unity
+    guid: 0983dfab05d59ca4f8ccaa3e0620701a
+  - enabled: 1
+    path: Assets/Scene/MainMenuOld.unity
+    guid: bd1f95feb68db3440877dc3e09678ff0
+  - enabled: 1
+    path: Assets/Scene/OriginalRestaurant.unity
+    guid: e517d735e58b2a748b260d94ec6ca4b0
+  - enabled: 1
+    path: Assets/Scene/NewRestaurant.unity
+    guid: f21f65ef1d6ba704c98b04240069eda8
   m_configObjects: {}

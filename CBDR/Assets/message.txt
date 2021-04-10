@@ -1,0 +1,618 @@
+using UnityEngine;
+
+[RequireComponent(typeof(AudioSource))]
+public class FirstPersonControl : MonoBehaviour
+{
+    private void Awake() {
+        gameObject.name = "Player(Mine)";
+        localPlayer = this;
+        layerMask = -33025;
+        if (cam == null)
+        {
+            cam = Camera.main;
+        }
+        mainMenu = cam.GetComponent<menu>();
+    }
+
+    private void Update()
+    {
+        /*if ((Input.GetButtonUp("Fire1") || Input.GetButtonUp("LeftHand")) && leftArmObject)
+        {
+            leftArmObject.networkView.RPC("SetBeingHeld", 2, new object[]
+            {
+                leftArmObject.networkView.viewID,
+                false,
+                leftArm.networkView.viewID,
+                networkView.viewID
+            });
+        }
+        if ((Input.GetButtonUp("Fire2") || Input.GetButtonUp("RightHand")) && rightArmObject)
+        {
+            rightArmObject.networkView.RPC("SetBeingHeld", 2, new object[]
+            {
+                rightArmObject.networkView.viewID,
+                false,
+                rightArm.networkView.viewID,
+                networkView.viewID
+            });
+        }
+        if (Input.GetButton("Fire1") && Input.GetButton("LeftHand"))
+        {
+            RaycastHit raycastHit;
+            if (leftArmObject)
+            {
+                if (leftArmPickup)
+                {
+                    if (!leftArmPickup.beingUsed)
+                    {
+                        Vector3 vector = leftArm.Find("hand").transform.position + leftArm.Find("hand").transform.forward * 2f * leftArmPickup.heldPositionOffset.z + leftArm.Find("hand").transform.right * leftArmPickup.heldPositionOffset.x + leftArm.Find("hand").transform.up * leftArmPickup.heldPositionOffset.y;
+                        Quaternion quaternion = transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x + leftArmPickup.heldRotateXOffset, 0f, 0f);
+                        leftArmObject.position = Vector3.Lerp(leftArmObject.position, vector, 30f * Time.deltaTime);
+                        leftArmObject.rotation = Quaternion.Lerp(leftArmObject.rotation, quaternion, 30f * Time.deltaTime);
+                    }
+                    else
+                    {
+                        Vector3 vector2 = cam.transform.position + cam.transform.forward * 1.5f + cam.transform.right * (leftArmPickup.heldPositionOffset.x * 0.3f);
+                        Quaternion quaternion2 = transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x, 0f, 0f);
+                        leftArmObject.position = Vector3.Lerp(leftArmObject.position, vector2, 30f * Time.deltaTime);
+                        leftArmObject.rotation = Quaternion.Lerp(leftArmObject.rotation, quaternion2, 30f * Time.deltaTime);
+                    }
+                }
+                else
+                {
+                    Vector3 vector3 = leftArm.Find("hand").transform.position + leftArm.Find("hand").transform.forward * 2f;
+                    Quaternion quaternion3 = transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x - 30f, 0f, 0f);
+                    leftArmObject.position = Vector3.Lerp(leftArmObject.position, vector3, 30f * Time.deltaTime);
+                    leftArmObject.rotation = Quaternion.Lerp(leftArmObject.rotation, quaternion3, 30f * Time.deltaTime);
+                }
+                if (leftArmObject.GetComponent<Rigidbody>() && !leftArmObject.GetComponent<Rigidbody>().isKinematic)
+                {
+                    leftArmObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
+                    leftArmObject.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+                }
+            }
+            else if (Physics.SphereCast(leftArm.Find("hand").transform.position, 0.25f, leftArm.transform.forward, ref raycastHit, 4.75f, layerMask) && (raycastHit.transform.gameObject.tag.Contains("Physics") || raycastHit.transform.root.tag.Contains("Physics")))
+            {
+                if (raycastHit.transform.gameObject.tag.Contains("Physics"))
+                {
+                    leftArmObject = raycastHit.transform;
+                }
+                else if (raycastHit.transform.root.tag.Contains("Physics"))
+                {
+                    leftArmObject = raycastHit.transform.root;
+                }
+                if (leftArmObject.gameObject.layer == 0)
+                {
+                    leftArmObject.gameObject.layer = 8;
+                }
+                networkView.RPC("setObjectGravity", 2, new object[]
+                {
+                    false,
+                    leftArmObject.networkView.viewID
+                });
+                leftArmPickup = leftArmObject.GetComponent<PickupObject>();
+                leftArmPickup.ResetHeldRotation();
+                leftArmObject.networkView.RPC("SetBeingHeld", 2, new object[]
+                {
+                    leftArmObject.networkView.viewID,
+                    true,
+                    leftArm.networkView.viewID,
+                    networkView.viewID
+                });
+            }
+        }
+        if (Input.GetButtonDown("RightHand"))
+        {
+            if (rightArm == null)
+            {
+                rightArm = Network.Instantiate(arm, transform.position + transform.right + transform.up + transform.forward, transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x, 0f, 0f), 1);
+            }
+            else
+            {
+                rightArm.position = transform.position + transform.right + transform.up + transform.forward;
+                rightArm.rotation = transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x, 0f, cam.transform.rotation.eulerAngles.z);
+                networkView.RPC("SetArmState", 2, new object[]
+                {
+                    rightArm.networkView.viewID,
+                    true
+                });
+            }
+        }
+        else if (Input.GetButton("RightHand") && rightArm)
+        {
+            if (cam.transform.rotation.eulerAngles.x <= maxCameraAngleFromZero)
+            {
+                armForwardBasedOnRotation = armExtraReach * (cam.transform.rotation.eulerAngles.x / maxCameraAngleFromZero);
+            }
+            else if (cam.transform.rotation.eulerAngles.x >= 360f - maxCameraAngleFromZero)
+            {
+                armForwardBasedOnRotation = armExtraReach * (Mathf.Abs(360f - cam.transform.rotation.eulerAngles.x) / maxCameraAngleFromZero);
+            }
+            if (!rightArmObject || !rightArmPickup.IsBeingUsed())
+            {
+                rightArm.position = Vector3.Lerp(rightArm.position, transform.position + transform.right + transform.up * 1.5f + transform.forward + cam.transform.forward * armForwardBasedOnRotation, 25f * Time.deltaTime);
+                rightArm.rotation = Quaternion.Lerp(rightArm.rotation, transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x - 30f, 0f, 0f), 20f * Time.deltaTime);
+            }
+            else if (rightArmObject && rightArmPickup.IsBeingUsed())
+            {
+                rightArm.position = Vector3.Lerp(rightArm.position, transform.position + transform.right * 1.6f + transform.up * 1.5f + transform.forward + -cam.transform.forward * 1f, 25f * Time.deltaTime);
+                rightArm.rotation = Quaternion.Lerp(rightArm.rotation, transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x, 0f, 0f), 20f * Time.deltaTime);
+            }
+        }
+        else if (Input.GetButtonUp("RightHand") && rightArm != null)
+        {
+            networkView.RPC("SetArmState", 2, new object[]
+            {
+                rightArm.networkView.viewID,
+                false
+            });
+        }
+        if (Input.GetButton("Fire2") && Input.GetButton("RightHand"))
+        {
+            RaycastHit raycastHit2;
+            if (rightArmObject)
+            {
+                if (rightArmPickup)
+                {
+                    if (!rightArmPickup.beingUsed)
+                    {
+                        Vector3 vector4 = rightArm.Find("hand").transform.position + rightArm.Find("hand").transform.forward * 2f * rightArmPickup.heldPositionOffset.z + rightArm.Find("hand").transform.right * -rightArmPickup.heldPositionOffset.x + rightArm.Find("hand").transform.up * rightArmPickup.heldPositionOffset.y;
+                        Quaternion quaternion4 = transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x + rightArmPickup.heldRotateXOffset, 0f, 0f);
+                        rightArmObject.position = Vector3.Lerp(rightArmObject.position, vector4, 30f * Time.deltaTime);
+                        rightArmObject.rotation = Quaternion.Lerp(rightArmObject.rotation, quaternion4, 30f * Time.deltaTime);
+                    }
+                    else
+                    {
+                        Vector3 vector5 = cam.transform.position + cam.transform.forward * 1.5f + cam.transform.right * (rightArmPickup.heldPositionOffset.x * 0.3f);
+                        Quaternion quaternion5 = transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x, 0f, 0f);
+                        rightArmObject.position = Vector3.Lerp(rightArmObject.position, vector5, 30f * Time.deltaTime);
+                        rightArmObject.rotation = Quaternion.Lerp(rightArmObject.rotation, quaternion5, 30f * Time.deltaTime);
+                    }
+                }
+                else
+                {
+                    Vector3 vector6 = rightArm.Find("hand").transform.position + rightArm.Find("hand").transform.forward * 2f;
+                    Quaternion quaternion6 = transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x - 30f, 0f, 0f);
+                    rightArmObject.position = Vector3.Lerp(rightArmObject.position, vector6, 30f * Time.deltaTime);
+                    rightArmObject.rotation = Quaternion.Lerp(rightArmObject.rotation, quaternion6, 30f * Time.deltaTime);
+                }
+                if (rightArmObject.GetComponent<Rigidbody>() && !rightArmObject.GetComponent<Rigidbody>().isKinematic)
+                {
+                    rightArmObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
+                    rightArmObject.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+                }
+            }
+            else if (Physics.SphereCast(rightArm.Find("hand").transform.position, 0.25f, rightArm.transform.forward, ref raycastHit2, 4.75f, layerMask) && (raycastHit2.transform.gameObject.tag.Contains("Physics") || raycastHit2.transform.root.tag.Contains("Physics")))
+            {
+                if (raycastHit2.transform.gameObject.tag.Contains("Physics"))
+                {
+                    rightArmObject = raycastHit2.transform;
+                }
+                else if (raycastHit2.transform.root.tag.Contains("Physics"))
+                {
+                    rightArmObject = raycastHit2.transform.root;
+                }
+                if (rightArmObject.gameObject.layer == 0)
+                {
+                    rightArmObject.gameObject.layer = 8;
+                }
+                networkView.RPC("setObjectGravity", 2, new object[]
+                {
+                    false,
+                    rightArmObject.networkView.viewID
+                });
+                rightArmPickup = rightArmObject.GetComponent<PickupObject>();
+                rightArmPickup.ResetHeldRotation();
+                rightArmPickup.networkView.RPC("SetBeingHeld", 2, new object[]
+                {
+                    rightArmObject.networkView.viewID,
+                    true,
+                    rightArm.networkView.viewID,
+                    networkView.viewID
+                });
+            }
+        }
+        RaycastHit raycastHit3;
+        if (Input.GetButtonDown("Fire2") && Input.GetButton("RightHand") && Physics.SphereCast(rightArm.Find("hand").transform.position + rightArm.Find("hand").transform.right * 0.5f, 0.5f, rightArm.transform.forward, ref raycastHit3, 15f, layerMask) && raycastHit3.transform.gameObject.tag == "NPC")
+        {
+            NPC component = raycastHit3.transform.GetComponent<NPC>();
+            if (!component.isFollowingPlayer)
+            {
+                component.networkView.RPC("FollowAPlayer", 2, new object[]
+                {
+                    gameObject.networkView.viewID
+                });
+            }
+            else
+            {
+                component.networkView.RPC("FollowNoPlayer", 2, new object[0]);
+            }
+        }*/
+
+        ///////////////////////////////////////////////////////////////////
+
+        //transform.localRotation = Quaternion.Euler(0f, cam.transform.localEulerAngles.y, 0f);
+        transform.localRotation = Quaternion.Euler(0f, cam.transform.GetComponent<MouseLook>().num2, 0f);
+        float axis = Input.GetAxis("Horizontal");
+        float axis2 = Input.GetAxis("Vertical");
+        moveDir = new Vector3(axis, 0f, axis2);
+        moveDir = transform.TransformDirection(moveDir);
+        moveDir *= moveSpeed;
+        if (Input.GetButton("Run"))
+        {
+            moveDir *= runMultiplier;
+            if (cam.fieldOfView < 80f)
+            {
+                cam.fieldOfView += (80f - cam.fieldOfView) / 0.1f * Time.deltaTime;
+            }
+        }
+        else if (Input.GetButton("Walk"))
+        {
+            moveDir *= crouchMultiplier;
+        }
+        else if (cam.fieldOfView > 70f)
+        {
+            cam.fieldOfView -= Mathf.Abs(70f - cam.fieldOfView) / 0.1f * Time.deltaTime;
+        }
+        if ((Input.GetButtonUp("Fire1") || Input.GetButtonUp("LeftHand")) && leftArmObject)
+        {
+            setObjectPosition(leftArm.Find("hand").transform.position + leftArm.Find("hand").transform.forward * 2f, transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x - 30f, 0f, 0f));
+            setObjectGravity(true);
+            setObjectCollisions(true);
+            if (leftArmObject.gameObject.layer == 8)
+            {
+                leftArmObject.gameObject.layer = 0;
+            }
+            leftArmObject = null;
+            leftArmPickup = null;
+        }
+        if ((Input.GetButtonUp("Fire2") || Input.GetButtonUp("RightHand")) && rightArmObject)
+        {
+            setObjectPosition(rightArm.Find("hand").transform.position + rightArm.Find("hand").transform.forward * 2f, transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x - 30f, 0f, 0f));
+            setObjectGravity(true);
+            setObjectCollisions(true);
+            if (rightArmObject.gameObject.layer == 8)
+            {
+                rightArmObject.gameObject.layer = 0;
+            }
+            rightArmObject = null;
+            rightArmPickup = null;
+        }
+        if (Input.GetButtonDown("LeftHand"))
+        {
+            if (leftArm == null)
+            {
+                leftArm = Instantiate(arm, transform.position - transform.right + transform.up + transform.forward, transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x, 0f, 0f));
+            }
+            else
+            {
+                leftArm.position = transform.position - transform.right + transform.up + transform.forward;
+                leftArm.rotation = transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x, 0f, 0f);
+				SetArmState(leftArm ,true);
+            }
+        }
+        else if (Input.GetButton("LeftHand") && leftArm)
+        {
+            if (cam.transform.rotation.eulerAngles.x <= maxCameraAngleFromZero)
+            {
+                armForwardBasedOnRotation = armExtraReach * (cam.transform.rotation.eulerAngles.x / maxCameraAngleFromZero);
+            }
+            else if (cam.transform.rotation.eulerAngles.x >= 360f - maxCameraAngleFromZero)
+            {
+                armForwardBasedOnRotation = armExtraReach * (Mathf.Abs(360f - cam.transform.rotation.eulerAngles.x) / maxCameraAngleFromZero);
+            }
+            leftArm.position = Vector3.Lerp(leftArm.position, transform.position - transform.right + transform.up * 1.5f + transform.forward + cam.transform.forward * armForwardBasedOnRotation, 25f * Time.deltaTime);
+            leftArm.rotation = Quaternion.Lerp(leftArm.rotation, transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x - 30f, 0f, 0f), 20f * Time.deltaTime);
+        }
+        else if (Input.GetButtonUp("LeftHand") && leftArm != null)
+        {
+			SetArmState(leftArm ,false);
+        }
+        if (Input.GetButton("Fire1") && Input.GetButton("LeftHand"))
+        {
+            RaycastHit raycastHit;
+            if (leftArmObject)
+            {
+                if (leftArmPickup)
+                {
+                    if (!leftArmPickup.beingUsed)
+                    {
+                        Vector3 vector = leftArm.Find("hand").transform.position + leftArm.Find("hand").transform.forward * 2f * leftArmPickup.heldPositionOffset.z + leftArm.Find("hand").transform.right * leftArmPickup.heldPositionOffset.x + leftArm.Find("hand").transform.up * leftArmPickup.heldPositionOffset.y;
+                        Quaternion quaternion = transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x + leftArmPickup.heldRotateXOffset, 0f, 0f);
+                        leftArmObject.position = Vector3.Lerp(leftArmObject.position, vector, 30f * Time.deltaTime);
+                        leftArmObject.rotation = Quaternion.Lerp(leftArmObject.rotation, quaternion, 30f * Time.deltaTime);
+                    }
+                    else
+                    {
+                        Vector3 vector2 = cam.transform.position + cam.transform.forward * 1.5f + cam.transform.right * (leftArmPickup.heldPositionOffset.x * 0.3f);
+                        Quaternion quaternion2 = transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x, 0f, 0f);
+                        leftArmObject.position = Vector3.Lerp(leftArmObject.position, vector2, 30f * Time.deltaTime);
+                        leftArmObject.rotation = Quaternion.Lerp(leftArmObject.rotation, quaternion2, 30f * Time.deltaTime);
+                    }
+                }
+                else
+                {
+                    Vector3 vector3 = leftArm.Find("hand").transform.position + leftArm.Find("hand").transform.forward * 2f;
+                    Quaternion quaternion3 = transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x - 30f, 0f, 0f);
+                    leftArmObject.position = Vector3.Lerp(leftArmObject.position, vector3, 30f * Time.deltaTime);
+                    leftArmObject.rotation = Quaternion.Lerp(leftArmObject.rotation, quaternion3, 30f * Time.deltaTime);
+                }
+                if (leftArmObject.GetComponent<Rigidbody>() && !leftArmObject.GetComponent<Rigidbody>().isKinematic)
+                {
+                    leftArmObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
+                    leftArmObject.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+                }
+            }
+            else if (Physics.SphereCast(leftArm.Find("hand").transform.position, 0.25f, leftArm.transform.forward, out raycastHit, 4.75f, layerMask) && (raycastHit.transform.gameObject.tag.Contains("Physics") || raycastHit.transform.root.tag.Contains("Physics")))
+            {
+                if (raycastHit.transform.gameObject.tag.Contains("Physics"))
+                {
+                    leftArmObject = raycastHit.transform;
+                }
+                else if (raycastHit.transform.root.tag.Contains("Physics"))
+                {
+                    leftArmObject = raycastHit.transform.root;
+                }
+                if (leftArmObject.gameObject.layer == 0)
+                {
+                    leftArmObject.gameObject.layer = 8;
+                }
+                leftArmPickup = leftArmObject.GetComponent<PickupObject>();
+                leftArmPickup.ResetHeldRotation();
+            }
+        }
+        if (Input.GetButtonDown("RightHand"))
+        {
+            if (rightArm == null)
+            {
+                rightArm = Instantiate(arm, transform.position + transform.right + transform.up + transform.forward, transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x, 0f, 0f));
+            }
+            else
+            {
+                rightArm.position = transform.position + transform.right + transform.up + transform.forward;
+                rightArm.rotation = transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x, 0f, cam.transform.rotation.eulerAngles.z);
+				SetArmState(rightArm, true);
+            }
+        }
+        else if (Input.GetButton("RightHand") && rightArm)
+        {
+            if (cam.transform.rotation.eulerAngles.x <= maxCameraAngleFromZero)
+            {
+                armForwardBasedOnRotation = armExtraReach * (cam.transform.rotation.eulerAngles.x / maxCameraAngleFromZero);
+            }
+            else if (cam.transform.rotation.eulerAngles.x >= 360f - maxCameraAngleFromZero)
+            {
+                armForwardBasedOnRotation = armExtraReach * (Mathf.Abs(360f - cam.transform.rotation.eulerAngles.x) / maxCameraAngleFromZero);
+            }
+            if (!rightArmObject || !rightArmPickup.IsBeingUsed())
+            {
+                rightArm.position = Vector3.Lerp(rightArm.position, transform.position + transform.right + transform.up * 1.5f + transform.forward + cam.transform.forward * armForwardBasedOnRotation, 25f * Time.deltaTime);
+                rightArm.rotation = Quaternion.Lerp(rightArm.rotation, transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x - 30f, 0f, 0f), 20f * Time.deltaTime);
+            }
+            else if (rightArmObject && rightArmPickup.IsBeingUsed())
+            {
+                rightArm.position = Vector3.Lerp(rightArm.position, transform.position + transform.right * 1.6f + transform.up * 1.5f + transform.forward + -cam.transform.forward * 1f, 25f * Time.deltaTime);
+                rightArm.rotation = Quaternion.Lerp(rightArm.rotation, transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x, 0f, 0f), 20f * Time.deltaTime);
+            }
+        }
+		else if (Input.GetButtonUp("RightHand") && rightArm != null)
+        {
+			SetArmState(rightArm, false);
+        }
+        if (Input.GetButton("Fire2") && Input.GetButton("RightHand"))
+        {
+            RaycastHit raycastHit2;
+            if (rightArmObject)
+            {
+                if (rightArmPickup)
+                {
+                    if (!rightArmPickup.beingUsed)
+                    {
+                        Vector3 vector4 = rightArm.Find("hand").transform.position + rightArm.Find("hand").transform.forward * 2f * rightArmPickup.heldPositionOffset.z + rightArm.Find("hand").transform.right * -rightArmPickup.heldPositionOffset.x + rightArm.Find("hand").transform.up * rightArmPickup.heldPositionOffset.y;
+                        Quaternion quaternion4 = transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x + rightArmPickup.heldRotateXOffset, 0f, 0f);
+                        rightArmObject.position = Vector3.Lerp(rightArmObject.position, vector4, 30f * Time.deltaTime);
+                        rightArmObject.rotation = Quaternion.Lerp(rightArmObject.rotation, quaternion4, 30f * Time.deltaTime);
+                    }
+                    else
+                    {
+                        Vector3 vector5 = cam.transform.position + cam.transform.forward * 1.5f + cam.transform.right * (rightArmPickup.heldPositionOffset.x * 0.3f);
+                        Quaternion quaternion5 = transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x, 0f, 0f);
+                        rightArmObject.position = Vector3.Lerp(rightArmObject.position, vector5, 30f * Time.deltaTime);
+                        rightArmObject.rotation = Quaternion.Lerp(rightArmObject.rotation, quaternion5, 30f * Time.deltaTime);
+                    }
+                }
+                else
+                {
+                    Vector3 vector6 = rightArm.Find("hand").transform.position + rightArm.Find("hand").transform.forward * 2f;
+                    Quaternion quaternion6 = transform.rotation * Quaternion.Euler(cam.transform.rotation.eulerAngles.x - 30f, 0f, 0f);
+                    rightArmObject.position = Vector3.Lerp(rightArmObject.position, vector6, 30f * Time.deltaTime);
+                    rightArmObject.rotation = Quaternion.Lerp(rightArmObject.rotation, quaternion6, 30f * Time.deltaTime);
+                }
+                if (rightArmObject.GetComponent<Rigidbody>() && !rightArmObject.GetComponent<Rigidbody>().isKinematic)
+                {
+                    rightArmObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
+                    rightArmObject.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+                }
+            }
+            else if (Physics.SphereCast(rightArm.Find("hand").transform.position, 0.25f, rightArm.transform.forward, out raycastHit2, 4.75f, layerMask) && (raycastHit2.transform.gameObject.tag.Contains("Physics") || raycastHit2.transform.root.tag.Contains("Physics")))
+            {
+                if (raycastHit2.transform.gameObject.tag.Contains("Physics"))
+                {
+                    rightArmObject = raycastHit2.transform;
+                }
+                else if (raycastHit2.transform.root.tag.Contains("Physics"))
+                {
+                    rightArmObject = raycastHit2.transform.root;
+                }
+                if (rightArmObject.gameObject.layer == 0)
+                {
+                    rightArmObject.gameObject.layer = 8;
+                }
+                rightArmPickup = rightArmObject.GetComponent<PickupObject>();
+                rightArmPickup.ResetHeldRotation();
+            }
+        }
+        RaycastHit raycastHit3;
+        if (Input.GetButtonDown("Fire2") && Input.GetButton("RightHand") && Physics.SphereCast(rightArm.Find("hand").transform.position + rightArm.Find("hand").transform.right * 0.5f, 0.5f, rightArm.transform.forward, out raycastHit3, 15f, layerMask) && raycastHit3.transform.gameObject.tag == "NPC")
+        {
+            NPC component = raycastHit3.transform.GetComponent<NPC>();
+        }
+        gravityToApply += gravity;
+        moveDir.y = moveDir.y - gravityToApply;
+        moveDir *= Time.deltaTime;
+        controller.Move(moveDir);
+        if (controller.isGrounded)
+        {
+            gravityToApply = 0f;
+        }
+    }
+
+    /*private void OnPlayerConnected(NetworkPlayer player)
+    {
+        foreach (GameObject gameObject in GameObject.FindGameObjectsWithTag("Arm"))
+        {
+            print("Found arm");
+            networkView.RPC("SetArmState", 1, new object[]
+            {
+                gameObject.networkView.viewID,
+                gameObject.GetComponent<Collider>().GetComponent<MeshRenderer>().enabled
+            });
+        }
+    }*/
+
+    private void SetArmState(Transform arm, bool active)
+    {
+		GameObject gameObject1 = arm.gameObject;
+        GameObject gameObject2 = gameObject1.transform.GetChild(0).gameObject;
+        gameObject1.GetComponent<MeshRenderer>().enabled = active;
+        gameObject2.GetComponent<MeshRenderer>().enabled = active;
+        gameObject2.GetComponent<BoxCollider>().enabled = active;
+    }
+
+    /*
+    private void DestroyObject(NetworkViewID id)
+    {
+        GameObject gameObject = NetworkView.Find(id).gameObject;
+        if (gameObject.tag.Equals("Arm"))
+        {
+            Network.RemoveRPCs(gameObject.transform.GetChild(0).networkView.viewID);
+            Network.Destroy(gameObject.transform.GetChild(0).gameObject);
+        }
+        Network.RemoveRPCs(id);
+        Network.Destroy(gameObject);
+    }*/
+
+    private void setObjectGravity(bool grav)
+    {
+        Transform transform = gameObject.transform;
+        if (transform.name.Equals("PlateModel") || transform.name.Equals("burger-bottom"))
+        {
+            transform = transform.parent;
+        }
+        if (transform.GetComponent<Rigidbody>())
+        {
+            transform.GetComponent<Rigidbody>().useGravity = grav;
+        }
+    }
+
+    private void setObjectKematic(bool kematic)
+    {
+        Transform transform = gameObject.transform;
+        if (transform.name.Equals("PlateModel") || transform.name.Equals("burger-bottom"))
+        {
+            transform = transform.parent;
+        }
+        transform.GetComponent<Rigidbody>().isKinematic = kematic;
+    }
+
+    private void setObjectCollisions(bool collide)
+    {
+        Transform transform = gameObject.transform;
+        if (transform.name.Equals("PlateModel") || transform.name.Equals("burger-bottom"))
+        {
+            transform = transform.parent;
+        }
+        if (!transform.name.Contains("notepad") && !transform.name.Contains("StaffMenu"))
+        {
+            transform.GetComponent<Collider>().enabled = collide;
+            if (transform.GetComponent<Collider>().isTrigger && !collide)
+            {
+                print("Error: unexpected isTrigger state");
+            }
+            transform.GetComponent<Collider>().isTrigger = !collide;
+        }
+    }
+
+    private void setObjectPosition(Vector3 pos, Quaternion rot)
+    {
+        Transform transform = gameObject.transform;
+        if (transform.name.Equals("PlateModel") || transform.name.Equals("burger-bottom"))
+        {
+            transform = transform.parent;
+        }
+        if (transform.GetComponent<Rigidbody>() && !transform.GetComponent<Rigidbody>().isKinematic)
+        {
+            transform.GetComponent<Rigidbody>().velocity = Vector3.zero;
+            transform.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+        }
+        transform.position = Vector3.Lerp(transform.position, pos, 30f * Time.deltaTime);
+        transform.rotation = Quaternion.Lerp(transform.rotation, rot, 30f * Time.deltaTime);
+    }
+
+    private void SetUsername(string username)
+    {
+        TextMesh component = gameObject.GetComponent<TextMesh>();
+        component.transform.root.GetComponent<FirstPersonControl>().username = username;
+        component.text = username;
+    }
+
+    public CharacterController controller;
+
+    public Camera cam;
+
+    public Transform arm;
+
+    public Transform leftArm;
+
+    public Transform leftArmObject;
+
+    private PickupObject leftArmPickup;
+
+    public Transform rightArm;
+
+    public Transform rightArmObject;
+
+    private PickupObject rightArmPickup;
+
+    public float gravity = 9.81f;
+
+    public float moveSpeed = 16f;
+
+    public float runMultiplier = 1.333f;
+
+    public float crouchMultiplier = 0.25f;
+
+    private Vector3 moveDir = Vector3.zero;
+
+    private float gravityToApply;
+
+    public int layerMask;
+
+    private float maxCameraAngleFromZero = 86f;
+
+    private float armForwardBasedOnRotation;
+
+    private float armExtraReach = 1.2f;
+
+    public string username = string.Empty;
+
+    public static FirstPersonControl localPlayer;
+
+    public Vector2 lastDrawPosition = Vector2.zero;
+
+    private int spawnedItems;
+
+    private int maxSpawnedItems = 8;
+
+    private menu mainMenu;
+}
