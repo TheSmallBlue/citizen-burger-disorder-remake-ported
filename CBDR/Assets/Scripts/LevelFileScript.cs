@@ -49,16 +49,7 @@ public class LevelFileScript : MonoBehaviour {
     }
 
     public void SaveEditName() {
-        string levelTexts;
-        levelTexts = File.ReadAllText(pathLevel);
-        System.DateTime dateTime;
-
-        dateTime = File.GetCreationTime(pathLevel);
-        File.Delete(pathLevel);
-        pathLevel = pathLevel.Substring(0, pathLevel.Length - transform.GetChild(0).GetChild(0).GetComponent<Text>().text.Length - 5) + inputFieldName.text + ".json";
-
-        File.WriteAllText(pathLevel, levelTexts);
-        File.SetCreationTime(pathLevel, dateTime);
+        File.Move(pathLevel, pathLevel.Substring(0, pathLevel.Length - transform.GetChild(0).GetChild(0).GetComponent<Text>().text.Length - 5) + inputFieldName.text + ".json");
 
         transform.GetChild(0).GetChild(0).GetComponent<Text>().text = inputFieldName.text;
         MenuChanges(0);

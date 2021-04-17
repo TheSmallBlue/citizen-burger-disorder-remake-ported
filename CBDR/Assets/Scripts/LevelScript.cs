@@ -43,6 +43,7 @@ public class LevelScript : MonoBehaviour {
         levelJsonScript.temp = new List<float>();
         levelJsonScript.colors = new List<Color>();
         levelJsonScript.cooked = new List<float>();
+        levelJsonScript.blends = new List<float>();
 
         // Set values on the lists
         levelJsonScript.positionPlayer = player.transform.position;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class NPC : MonoBehaviour
 {
@@ -9,6 +10,7 @@ public class NPC : MonoBehaviour
         toExitScene,
         toEnter,
         toFindSeat,
+        toOrder,
         toGetToSeat,
         toGetMenu,
         toLeave,
@@ -92,6 +94,11 @@ public class NPC : MonoBehaviour
 
     private int pathfindLayerMask = -53505;
 
+    // New Update
+    public int burgerIndex;
+    public bool askingForOrder;
+    public GameObject orderNumber;
+
     /*private void OnPlayerConnected(NetworkPlayer player)
     {
         SyncPosition(transform.position, transform.rotation);
@@ -157,6 +164,9 @@ public class NPC : MonoBehaviour
         randomDistanceFromNodeBias.y = 0f;
         speed *= UnityEngine.Random.Range(0.9f, 1.5f);
         FindExit(true);
+
+        burgerIndex = UnityEngine.Random.Range(0, Menu.ItemNames.Length);
+        //Debug.Log("Test Random Burger: " + burger);
     }
 
     private void Update()
@@ -192,7 +202,15 @@ public class NPC : MonoBehaviour
                 if (pathToFollow.Count == 0)
                 {
                     Enterance.npcsWaiting++;
-                    setWants(wants.toFindSeat);
+
+                    // System
+                    if (SceneManager.GetSceneAt(0).buildIndex == 2) {
+                        setWants(wants.toFindSeat);
+                    } else {
+                        pathToFollow.Add(graph.nodes.ToArray()[12]);
+                        setWants(wants.toOrder);
+                        //setWants(wants.toFindSeat);
+                    }
                 }
                 else if (Time.time > lastLinecastCheck + linecastCheckDelay && Physics.Linecast(transform.position, pathToFollow[0].transform.position, out raycastHit, pathfindLayerMask) && raycastHit.distance < 3f)
                 {
@@ -244,8 +262,6 @@ public class NPC : MonoBehaviour
                 if (pathToFollow.Count == 0)
                 {
                     SpawnNPC.currentNPCs--;
-                    /*Network.RemoveRPCs(base.networkView.viewID);
-                    Network.Destroy(base.networkView.viewID);*/
                     Destroy(gameObject);
                 }
                 else if (Time.time > lastLinecastCheck + linecastCheckDelay && Physics.Linecast(transform.position, pathToFollow[0].transform.position, out raycastHit2, layerMask) && raycastHit2.distance < 3f)
@@ -292,6 +308,58 @@ public class NPC : MonoBehaviour
                 }
             }
         }
+        else if (currentlyWants == wants.toOrder) {
+            GameObject orderPoint = GameObject.Find("OrderPoint");
+
+            Vector3 pointOrder = Vector3.zero;
+            for (int i = 0; i < orderPoint.GetComponent<OrderScript>().npcs.ToArray().Length; i++) {
+                if (orderPoint.GetComponent<OrderScript>().npcs.ToArray()[i] == gameObject) {
+                    pointOrder += Vector3.forward * i * 3;
+                }
+            }
+
+            Vector3 vector3 = Vector3.zero;
+            Vector3 a3 = Vector3.zero;
+            if (pathToFollow.Count > 0) {
+                vector3 += Seek(pathToFollow[0].transform.position + pointOrder) * followWeight * 1.5f;
+                a3 = vector3;
+                a3.y = 0f;
+                vector3 += SeparateAvoidNodes() * avoidNodesWeight;
+                vector3.y = 0f;
+                if (vector3 != Vector3.zero)
+                {
+                    transform.rotation = Quaternion.LookRotation(a3 + transform.forward);
+                }
+                GetComponent<Rigidbody>().AddForce(vector3.normalized * maxSpeed * 10f * Time.deltaTime); // Move
+
+                if ((transform.position - pathToFollow[0].transform.position).magnitude < 3) {
+                    pathToFollow.RemoveAt(0);
+                }
+            } else {
+                vector3 += Seek(orderPoint.transform.position + pointOrder) * followWeight * 1.5f;
+                a3 = vector3;
+                a3.y = 0f;
+                vector3 += SeparateAvoidNodes() * avoidNodesWeight;
+                vector3.y = 0f;
+                if ((transform.position - (orderPoint.transform.position + pointOrder)).magnitude > 1) {
+                    if (vector3 != Vector3.zero)
+                    {
+                        transform.rotation = Quaternion.LookRotation(a3 + transform.forward);
+                    }
+                    GetComponent<Rigidbody>().AddForce(vector3.normalized * maxSpeed * 10f * Time.deltaTime); // Move
+                } else {
+                    Transform tryGetObject = LookAtPlayer(15);
+
+                    if (tryGetObject) {
+                        transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(0, Quaternion.LookRotation(tryGetObject.position - transform.position).eulerAngles.y, 0), 4 * Time.deltaTime);
+                    } else {
+                        transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(180, 0, 180), 4 * Time.deltaTime);
+                    }
+                }
+                
+                //Debug.Log((transform.position - (orderPoint.transform.position + pointOrder)).magnitude);
+            }
+        }
         else if (currentlyWants == wants.toFindSeat)
         {
             List<NPC> list = new List<NPC>();
@@ -304,6 +372,8 @@ public class NPC : MonoBehaviour
                 for (int i = 0; i < array.Length; i++)
                 {
                     GameObject gameObject = array[i];
+                    //Debug.Log(gameObject.name + "; " + base.gameObject.name);
+                    //Debug.Log((gameObject != base.gameObject) + "; " + ((transform.position - gameObject.transform.position).magnitude < 40f));
                     if (gameObject != base.gameObject && (transform.position - gameObject.transform.position).magnitude < 40f)
                     {
                         NPC component = gameObject.GetComponent<NPC>();
@@ -315,14 +385,23 @@ public class NPC : MonoBehaviour
                     }
                 }
             }
-            if (list.Count > 1 && list.Count == desiredGroupSize)
-            {
+
+            // System
+            if (SceneManager.GetSceneAt(0).buildIndex == 3) {
+                int randomNumber = 0;
+                while (randomNumber != int.Parse(orderNumber.name.Substring(orderNumber.name.Length - 1))) {
+                    if (randomNumber == int.Parse(orderNumber.name.Substring(orderNumber.name.Length - 1))) {
+                        break;
+                    }
+                    randomNumber = UnityEngine.Random.Range(1, TableGraph.tables.Length+1);
+                }
+
                 myNPCGroup = list;
                 if (tableGraph == null)
                 {
                     tableGraph = GameObject.Find("!TableNodes").GetComponent<TableGraph>();
                 }
-                num = TableGraph.FindUnoccupiedTableForGroup(myNPCGroup.Count);
+                num = randomNumber;
                 print("Goal table: " + num);
                 if (num >= 0)
                 {
@@ -362,7 +441,7 @@ public class NPC : MonoBehaviour
                 }
                 else
                 {
-                    if (/*Network.isServer && */desiredGroupSize == 4 && UnityEngine.Random.value > 0.8f)
+                    if (desiredGroupSize == 4 && UnityEngine.Random.value > 0.8f)
                     {
                         setGroupSize(gameObject, 2);
                     }
@@ -372,41 +451,103 @@ public class NPC : MonoBehaviour
                     idleStartTime = Time.time;
                     idleTimeRand = UnityEngine.Random.Range(20f, 40f);
                 }
-            }
-            else if (desiredGroupSize == 1)
-            {
-                if (tableGraph == null)
+            } else {
+                if ((list.Count > 1 && list.Count == desiredGroupSize) || SceneManager.GetSceneAt(0).buildIndex == 3)
                 {
-                    tableGraph = GameObject.Find("!TableNodes").GetComponent<TableGraph>();
-                }
-                num = TableGraph.FindUnoccupiedTableForGroup(myNPCGroup.Count);
-                if (num >= 0)
-                {
-                    foreach (TableNodes current3 in TableGraph.tables[num - 1].tableNodes)
+                    myNPCGroup = list;
+                    if (tableGraph == null)
                     {
-                        if (!current3.occupied)
+                        tableGraph = GameObject.Find("!TableNodes").GetComponent<TableGraph>();
+                    }
+                    num = TableGraph.FindUnoccupiedTableForGroup(myNPCGroup.Count);
+                    print("Goal table: " + num);
+                    if (num >= 0)
+                    {
+                        foreach (NPC current in list)
                         {
-                            targetSeat = current3;
-                            current3.SetOccupied(true);
-                            setWants(wants.toGetToSeat);
-                            pathToFollow = graph.FindPath(FindClosestNode(transform.position), FindClosestVisibleNode(targetSeat.transform));
-                            Enterance.npcsWaiting--;
-                            break;
+                            if (current != this)
+                            {
+                                current.myNPCGroupLeader = this;
+                                current.setWants(wants.toGetToSeat);
+                            }
+                            foreach (TableNodes current2 in TableGraph.tables[num - 1].tableNodes)
+                            {
+                                if (!current2.occupied)
+                                {
+                                    current.targetSeat = current2;
+                                    current2.SetOccupied(true);
+                                    current.setWants(wants.toGetToSeat);
+                                    current.pathToFollow = graph.FindPath(FindClosestNode(current.transform.position), FindClosestVisibleNode(current.targetSeat.transform));
+                                    print(string.Concat(new object[]
+                                    {
+                                    "Found a seat for id[",
+                                    list.IndexOf(current),
+                                    "] @ ",
+                                    num,
+                                    " : ",
+                                    TableGraph.tables[num - 1].tableNodes.IndexOf(current2)
+                                    }));
+                                    Enterance.npcsWaiting--;
+                                    break;
+                                }
+                            }
+                            if (targetSeat == null)
+                            {
+                                print("Error: no free seat found?");
+                            }
                         }
                     }
+                    else
+                    {
+                        if (/*Network.isServer && */desiredGroupSize == 4 && UnityEngine.Random.value > 0.8f)
+                        {
+                            setGroupSize(gameObject, 2);
+                        }
+                        myNPCGroup = new List<NPC>();
+                        myNPCGroupLeader = null;
+                        setWants(wants.toIdle);
+                        idleStartTime = Time.time;
+                        idleTimeRand = UnityEngine.Random.Range(20f, 40f);
+                    }
                 }
-                setWants(wants.toIdle);
-                idleStartTime = Time.time;
-                idleTimeRand = UnityEngine.Random.Range(20f, 40f);
+                else if (desiredGroupSize == 1)
+                {
+                    if (tableGraph == null)
+                    {
+                        tableGraph = GameObject.Find("!TableNodes").GetComponent<TableGraph>();
+                    }
+                    num = TableGraph.FindUnoccupiedTableForGroup(myNPCGroup.Count);
+                    if (num >= 0)
+                    {
+                        foreach (TableNodes current3 in TableGraph.tables[num - 1].tableNodes)
+                        {
+                            if (!current3.occupied)
+                            {
+                                targetSeat = current3;
+                                current3.SetOccupied(true);
+                                setWants(wants.toGetToSeat);
+                                pathToFollow = graph.FindPath(FindClosestNode(transform.position), FindClosestVisibleNode(targetSeat.transform));
+                                Enterance.npcsWaiting--;
+                                break;
+                            }
+                        }
+                    }
+                    setWants(wants.toIdle);
+                    idleStartTime = Time.time;
+                    idleTimeRand = UnityEngine.Random.Range(20f, 40f);
+                }
+                else
+                {
+                    myNPCGroup = new List<NPC>();
+                    myNPCGroupLeader = null;
+                    setWants(wants.toIdle);
+                    idleStartTime = Time.time;
+                    idleTimeRand = UnityEngine.Random.Range(10f, 30f);
+                }
             }
-            else
-            {
-                myNPCGroup = new List<NPC>();
-                myNPCGroupLeader = null;
-                setWants(wants.toIdle);
-                idleStartTime = Time.time;
-                idleTimeRand = UnityEngine.Random.Range(10f, 30f);
-            }
+
+            //Debug.Log((list.Count > 1) + " " + (list.Count == desiredGroupSize));
+            //Debug.Log(list.Count + " " + desiredGroupSize);
         }
         else if (currentlyWants == wants.toGetToSeat)
         {
@@ -448,7 +589,12 @@ public class NPC : MonoBehaviour
                         {
                             targetSeat.table.GenerateFoodOrder();
                         }*/
-                        targetSeat.table.GenerateFoodOrder();
+                        if (SceneManager.GetSceneAt(0).buildIndex == 3) {
+                            targetSeat.table.GenerateFoodOrder(burgerIndex);
+                        } else {
+                            targetSeat.table.GenerateFoodOrder(-1);
+                        }
+                        //targetSeat.table.GenerateFoodOrder();
                         foodWaitStartTime = Time.time;
                     }
                     vector3 += Seek(targetSeat.transform.position) * followWeight;
@@ -474,7 +620,12 @@ public class NPC : MonoBehaviour
                     {
                         targetSeat.table.GenerateFoodOrder();
                     }*/
-                    targetSeat.table.GenerateFoodOrder();
+                    if (SceneManager.GetSceneAt(0).buildIndex == 3) {
+                        targetSeat.table.GenerateFoodOrder(burgerIndex);
+                    } else {
+                        targetSeat.table.GenerateFoodOrder(-1);
+                    }
+                    //targetSeat.table.GenerateFoodOrder();
                     foodWaitStartTime = Time.time;
                 }
                 vector3 += Seek(targetSeat.transform.position) * followWeight * 1.5f;
@@ -509,7 +660,7 @@ public class NPC : MonoBehaviour
                         foreach (NPC current5 in myNPCGroup)
                         {
                             current5.targetSeat.table.npcAtTable = null;
-                            current5.targetSeat.table.ClearOrder();
+                            //current5.targetSeat.table.ClearOrder();
                             current5.targetSeat.SetOccupied(false);
                             current5.FindExit(false);
                             current5.CreatePath(current5.exitNode.transform.position);
@@ -519,7 +670,7 @@ public class NPC : MonoBehaviour
                     else
                     {
                         targetSeat.table.npcAtTable = null;
-                        targetSeat.table.ClearOrder();
+                        //targetSeat.table.ClearOrder();
                         targetSeat.SetOccupied(false);
                         FindExit(false);
                         CreatePath(exitNode.transform.position);
@@ -539,6 +690,44 @@ public class NPC : MonoBehaviour
         {
             currentlyWants = wants.toLeave;
         }
+
+        if (SceneManager.GetSceneAt(0).buildIndex == 3) {
+            gameObject.GetComponent<Collider>().enabled = currentlyWants != wants.toEat;
+            gameObject.GetComponent<Rigidbody>().isKinematic = currentlyWants == wants.toEat;
+            if (currentlyWants == wants.toEat) {
+                transform.rotation = Quaternion.Euler(0, Quaternion.LookRotation(orderNumber.transform.position - transform.position).eulerAngles.y, 0);
+            }
+        } // System Scenes
+
+        if (orderNumber) {
+            switch (currentlyWants) {
+                case wants.toGetToSeat:
+                    orderNumber.GetComponent<Rigidbody>().isKinematic = true;
+                    orderNumber.GetComponent<Collider>().enabled = false;
+                    orderNumber.transform.position = Vector3.Lerp(orderNumber.transform.position, transform.position + transform.forward * 2, 0.5f);
+                    orderNumber.transform.rotation = Quaternion.Lerp(orderNumber.transform.rotation, transform.rotation, 0.5f);
+                    break;
+                case wants.toEat:
+                    orderNumber.transform.position = Vector3.Lerp(orderNumber.transform.position, targetSeat.table.transform.position + targetSeat.table.transform.up * 1.1f + targetSeat.table.transform.right * 3, 0.5f);
+                    orderNumber.transform.rotation = Quaternion.Lerp(orderNumber.transform.rotation, targetSeat.table.transform.rotation, 0.5f);
+                    break;
+                case wants.toExitScene:
+                    orderNumber.GetComponent<Rigidbody>().isKinematic = false;
+                    orderNumber.GetComponent<Collider>().enabled = true;
+                    orderNumber = null;
+                    break;
+            }
+        } // If he got Order Number
+    }
+
+    Transform LookAtPlayer(int radius) {
+        Transform tryGetObject = null;
+        for (int i = 0; i < Physics.OverlapSphere(transform.position, radius).Length; i++) {
+            if (Physics.OverlapSphere(transform.position, radius).Length > 0 && Physics.OverlapSphere(transform.position, radius)[i].tag == "Player") {
+                tryGetObject = Physics.OverlapSphere(transform.position, radius)[i].transform;
+            }
+        }
+        return tryGetObject;
     }
 
     public void FindExit(bool excludeNearestExit)

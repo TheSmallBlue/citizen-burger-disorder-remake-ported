@@ -283,7 +283,7 @@ public class Rat : MonoBehaviour
                 Vector3 position = transform.position;
                 float y = position.y;
                 Vector3 position2 = collider.transform.position;
-                if (Mathf.Abs(y - position2.y) < 10f)
+                if (Mathf.Abs(y - position2.y) < radiusCatchNodes)
                 {
                     return collider.gameObject;
                 }
@@ -295,9 +295,10 @@ public class Rat : MonoBehaviour
 
     Collider colliderTest;
     float testFloat;
+    float radiusCatchNodes = 2;
     private void OnDrawGizmos()
     {
-        Gizmos.DrawWireSphere(transform.position, 10f);
+        Gizmos.DrawWireSphere(transform.position, radiusCatchNodes);
         Gizmos.DrawWireSphere(transform.position, testFloat);
         Gizmos.DrawWireSphere(transform.position + transform.forward, 1);
         if (colliderTest) {

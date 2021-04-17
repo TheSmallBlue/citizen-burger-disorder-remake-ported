@@ -9,7 +9,7 @@ public class MenuManager : MonoBehaviour {
     public bool isPause;
 
     GameObject rigidObjects;
-    bool notepadUse;
+    //bool notepadUse;
 
     UserJson userJson = new UserJson();
     string path;
@@ -30,30 +30,43 @@ public class MenuManager : MonoBehaviour {
         }
         menuPause.GetComponent<CanvasGroup>().blocksRaycasts = isPause;
 
-        for (int i = 0; i < rigidObjects.transform.childCount; i++) {
+        /*for (int i = 0; i < rigidObjects.transform.childCount; i++) {
             if (rigidObjects.transform.GetChild(i).gameObject.name == "Notepad" && rigidObjects.transform.GetChild(i).GetComponent<ObjectUsable>().beingUsed) {
                 notepadUse = true;
             }
-        }
+        }*/
 
         if (player) {
             player.GetComponent<FirstPersonControl>().enabled = !isPause;
         }
-        if (notepadUse) {
+        /*if (notepadUse) {
             Cursor.lockState = CursorLockMode.None;
             Camera.main.GetComponent<MouseLook>().canMouseMove = false;
         } else {
             if (isPause) {
                 Cursor.lockState = CursorLockMode.None;
                 menuPause.GetComponent<CanvasGroup>().alpha = 1;
+                Time.timeScale = 0;
             } else {
                 Cursor.lockState = CursorLockMode.Locked;
                 menuPause.GetComponent<CanvasGroup>().alpha = 0;
+                Time.timeScale = 1;
             }
             Camera.main.GetComponent<MouseLook>().canMouseMove = !isPause;
+        }*/
+        
+        if (isPause) {
+            Cursor.lockState = CursorLockMode.None;
+            menuPause.GetComponent<CanvasGroup>().alpha = 1;
+            Time.timeScale = 0;
+        } else {
+            Cursor.lockState = CursorLockMode.Locked;
+            menuPause.GetComponent<CanvasGroup>().alpha = 0;
+            Time.timeScale = 1;
         }
+        Camera.main.GetComponent<MouseLook>().canMouseMove = !isPause;
         Cursor.visible = isPause;
-        notepadUse = false;
+        //notepadUse = false;
     }
     public void MenuOptions(bool open) {
         menuOptions.GetComponent<CanvasGroup>().blocksRaycasts = open;

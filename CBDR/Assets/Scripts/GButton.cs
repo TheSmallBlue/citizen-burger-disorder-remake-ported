@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GButton : GElement
 {
@@ -10,6 +11,12 @@ public class GButton : GElement
         {
             obj = transform.root.GetComponent<ObjectUsable>();
         }*/
+        
+        if (SceneManager.GetSceneAt(0).buildIndex == 2) {
+            hoverColor = Color.Lerp(Color.blue, Color.white, 0.7f);
+        } else {
+            hoverColor = new Color(0, 0.5f, 1);
+        }
     }
 
     public override void Update()
@@ -200,7 +207,8 @@ public class GButton : GElement
 
     public bool usable = true;
 
-    public Color hoverColor = Color.Lerp(Color.blue, Color.white, 0.7f);
+    //public Color hoverColor = Color.Lerp(Color.blue, Color.white, 0.7f);
+    public Color hoverColor;
 
     public Color pressedColor = Color.Lerp(Color.green, Color.white, 0.6f);
 

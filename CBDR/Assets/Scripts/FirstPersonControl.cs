@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.SceneManagement;
 
 [RequireComponent(typeof(AudioSource))]
 public class FirstPersonControl : MonoBehaviour {
@@ -57,7 +58,7 @@ public class FirstPersonControl : MonoBehaviour {
 
     public HandleScript rightHandle;
 
-    bool isSpectator;
+    public static bool isSpectator;
 
     private void Awake()
     {
@@ -102,9 +103,9 @@ public class FirstPersonControl : MonoBehaviour {
         } else if (Input.GetKey(KeyCode.A)) {
             cam.transform.position -= cam.transform.right * spectatorSpeed;
         }
-        if (Input.GetKey(KeyCode.Space)) {
+        if (Input.GetKey(KeyCode.E)) {
             cam.transform.position += cam.transform.up * spectatorSpeed;
-        } else if (Input.GetKey(KeyCode.LeftControl)) {
+        } else if (Input.GetKey(KeyCode.Q)) {
             cam.transform.position -= cam.transform.up * spectatorSpeed;
         }
     }
@@ -137,6 +138,13 @@ public class FirstPersonControl : MonoBehaviour {
             if (leftArmObject.gameObject.layer == 8) {
                 leftArmObject.gameObject.layer = 0;
             }
+
+            // System Scenes
+            if (SceneManager.GetSceneAt(0).buildIndex == 3) {
+                leftArmObject.GetComponent<Rigidbody>().velocity = (leftArmObject.position - leftArmObjectLastPosition) * speedThrow;
+                leftArmObjectLastPosition = Vector3.zero;
+            }
+
             leftArmObject = null;
             leftArmPickup = null;
         }
@@ -149,6 +157,13 @@ public class FirstPersonControl : MonoBehaviour {
             {
                 rightArmObject.gameObject.layer = 0;
             }
+
+            // System Scenes
+            if (SceneManager.GetSceneAt(0).buildIndex == 3) {
+                rightArmObject.GetComponent<Rigidbody>().velocity = (rightArmObject.position - rightArmObjectLastPosition) * speedThrow;
+                rightArmObjectLastPosition = Vector3.zero;
+            }
+
             rightArmObject = null;
             rightArmPickup = null;
         }
@@ -408,9 +423,24 @@ public class FirstPersonControl : MonoBehaviour {
             rightArmObject = null;
         }
 
+        // System Scenes
+        if (SceneManager.GetSceneAt(0).buildIndex == 3) {
+            // Set Last Object Position
+            if (leftArmObject) {
+                leftArmObjectLastPosition = Vector3.Lerp(leftArmObjectLastPosition, leftArmObject.position, 0.8f);
+            }
+            if (rightArmObject) {
+                rightArmObjectLastPosition = Vector3.Lerp(rightArmObjectLastPosition, rightArmObject.position, 0.8f);
+            }
+        }
+
         // Cursor
         lastDrawPosition = Input.mousePosition - new Vector3(Screen.width / 2, Screen.height / 2);
     }
+
+    Vector3 leftArmObjectLastPosition;
+    Vector3 rightArmObjectLastPosition;
+    float speedThrow = 50;
 
     void OnDrawGizmos() {
         if (leftArm) {

@@ -63,7 +63,11 @@ public class GScreen : MonoBehaviour
     {
         INavigation component = (Instantiate(NavigationPrefab, screenCentre, transform.rotation) as GameObject).GetComponent<INavigation>();
         component.SetScreen(this);
-        component.SetBackgroundColor(Color.black);
+        if (SceneManager.GetSceneAt(0).buildIndex == 2) {
+            component.SetBackgroundColor(Color.black);
+        } else {
+            component.SetBackgroundColor(new Color(0, 0.8f, 1));
+        }
         INavigation navigation = component;
         Vector2 vector = BoundsPercentageToPixels(wPercent, 0f);
         float x2 = vector.x;

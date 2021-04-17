@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class Table : MonoBehaviour
 {
@@ -42,6 +43,26 @@ public class Table : MonoBehaviour
             else if (speechBubble != null && (Camera.main.transform.position - transform.position).magnitude >= 15f)
             {
                 DestroySpeechBubble();
+            }
+        }
+
+        if (plate) {
+            plate.GetComponent<Rigidbody>().isKinematic = true;
+            plate.tag = "Untagged";
+            plate.transform.position = Vector3.Lerp(plate.transform.position, transform.position + new Vector3(0, 0.5f, 0), 2 * Time.deltaTime);
+            plate.transform.rotation = Quaternion.Lerp(plate.transform.rotation, Quaternion.identity, 2 * Time.deltaTime);
+
+            timer += Time.deltaTime;
+            if (timer >= 1) {
+                plate.transform.Find("bun-bottom").position = Vector3.Lerp(plate.transform.Find("bun-bottom").position, npcAtTable.transform.position + npcAtTable.transform.forward * 1.2f + npcAtTable.transform.up * 1.5f + npcAtTable.transform.up * (Mathf.PingPong(timer, 0.1f) * 20 - 1.2f), 2 * Time.deltaTime);
+            }
+            if (timer >= 20 && !stopBool) {
+                plate.GetComponent<Rigidbody>().isKinematic = false;
+                plate.tag = "Physics";
+                plate.transform.Find("bun-bottom").position = plate.transform.position;
+                FinishEating(plate);
+                plate = null;
+                stopBool = true;
             }
         }
     }
@@ -126,14 +147,21 @@ public class Table : MonoBehaviour
         component.npcAtTable = null;
     }
 
-    public void GenerateFoodOrder()
+    public void GenerateFoodOrder(int index)
     {
+        
         string str = string.Empty;
         int num = 1;
         foodOrder.Clear();
         for (int i = 0; i < num; i++)
         {
-            int num2 = Random.Range(0, Menu.Items.Length);
+            int num2;
+            if (index > -1) {
+                num2 = index;
+            } else {
+                num2 = Random.Range(0, Menu.Items.Length);
+            }
+            //int num2 = Random.Range(0, Menu.Items.Length);
             string empty = string.Empty;
             foodOrder.Add(Menu.ItemNames[num2]);
             if (mainComputer == null && GameObject.Find("!Monitor"))
@@ -167,19 +195,34 @@ public class Table : MonoBehaviour
         }
     }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        if (/*!Network.isServer || */foodOrder == null || foodOrder.Count <= 0 || !other.transform.Find("triggerPlate") || !other.transform.GetComponent<Rigidbody>() || !other.transform.GetComponent<Rigidbody>().useGravity)
-        {
+    float timer;
+    GameObject plate;
+    bool stopBool;
+
+    private void OnTriggerEnter(Collider other) {
+        if (SceneManager.GetSceneAt(0).buildIndex == 2) {
+            FinishEating(other.gameObject);
+        } else {
+            if (foodOrder == null || foodOrder.Count <= 0 || !other.transform.Find("triggerPlate") || !other.transform.GetComponent<Rigidbody>() || !other.transform.GetComponent<Rigidbody>().useGravity) {
+                return;
+            }
+            plate = other.gameObject;
+            timer = 0;
+        }
+    }
+
+    void FinishEating(GameObject other) {
+        if (/*!Network.isServer || */foodOrder == null || foodOrder.Count <= 0 || !other.transform.Find("triggerPlate") || !other.transform.GetComponent<Rigidbody>() || !other.transform.GetComponent<Rigidbody>().useGravity) {
             return;
         }
         Plate component = other.transform.Find("triggerPlate").GetComponent<Plate>();
+
         if (component.foodOnPlate.Count > 0)
         {
-            if (matchPlateToOrder(component.foodOnPlate))
+            /*if (matchPlateToOrder(component.foodOnPlate))
             {
-                //StartCoroutine(NetworkSend.Send(component.transform.parent.GetComponent<PickupObject>().lastPlayerHolding.username, "OrdersCompleted", "1"));
-            }
+                StartCoroutine(NetworkSend.Send(component.transform.parent.GetComponent<PickupObject>().lastPlayerHolding.username, "OrdersCompleted", "1"));
+            }*/
             float num = Menu.ScoreFood(foodOrder[0], component.foodOnPlate[0]);
             num = Mathf.Round(num * 1.3f);
             num *= 0.5f;

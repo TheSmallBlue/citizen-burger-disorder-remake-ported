@@ -19,7 +19,7 @@ public class Sink : MonoBehaviour
 
     private void OnTriggerStay(Collider other)
     {
-        if (other.tag.Equals("Physics") && other.GetComponent<MeshRenderer>().material.name.Contains("plate"))
+        if (other.tag.Equals("Physics") && other.GetComponent<MeshRenderer>() && other.GetComponent<MeshRenderer>().material.name.Contains("plate"))
         {
             float @float = other.GetComponent<MeshRenderer>().material.GetFloat("_Blend");
             if (@float > 0f)
